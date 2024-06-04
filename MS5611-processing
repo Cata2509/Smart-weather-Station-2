@@ -4,9 +4,9 @@
 #include <WiFiUdp.h>
 
 const char* ssid = "server";
-const char* password = "syscad2014";
-const char* serverIP = "192.168.0.140";
-const int serverPort = 8888;  // Portul serverului UDP
+const char* password = "password";
+const char* serverIP = "server ip";
+const int serverPort = port;  // Portul serverului UDP
 WiFiUDP udp;
 MS5611 ms5611;
 
