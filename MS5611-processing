@@ -1,0 +1,93 @@
+#include <Wire.h>
+#include "MS5611.h"
+#include <WiFi.h>
+#include <WiFiUdp.h>
+
+const char* ssid = "server";
+const char* password = "syscad2014";
+const char* serverIP = "192.168.0.140";
+const int serverPort = 8888;  // Portul serverului UDP
+WiFiUDP udp;
+MS5611 ms5611;
+
+double referencePressure;
+unsigned long previousTime = 0;
+const unsigned long interval = 10000;  // Intervalul de timp de 2 minute (în milisecunde)
+
+void setup()
+{
+  Serial.begin(9600);
+
+  // Initialize MS5611 sensor
+  Serial.println("Initialize MS5611 Sensor");
+// Connect to WiFi
+  Serial.print("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("Connected to WiFi");
+  while (!ms5611.begin())
+  {
+    Serial.println("Could not find a valid MS5611 sensor, check wiring!");
+    delay(500);
+  }
+
+  // Get reference pressure for relative altitude
+  referencePressure = ms5611.readPressure();
+
+  // Check settings
+  checkSettings();
+}
+
+void checkSettings()
+{
+  Serial.print("Oversampling: ");
+  Serial.println(ms5611.getOversampling());
+}
+
+void loop()
+{
+  unsigned long currentTime = millis();
+  if (currentTime - previousTime >= interval)
+  {
+    previousTime = currentTime;
+
+    // Read raw values
+    uint32_t rawTemp = ms5611.readRawTemperature();
+    uint32_t rawPressure = ms5611.readRawPressure();
+
+    // Read true temperature & Pressure
+    double realTemperature = ms5611.readTemperature();
+    long realPressure = ms5611.readPressure();
+
+    // Calculate altitude
+    float absoluteAltitude = ms5611.getAltitude(realPressure);
+    float relativeAltitude = ms5611.getAltitude(realPressure, referencePressure);
+
+    // Trimite datele prin portul serial în format CSV
+    Serial.print(rawTemp);
+    Serial.print(",");
+    Serial.print(realTemperature);
+    Serial.print(",");
+    Serial.print(rawPressure);
+    Serial.print(",");
+    Serial.print(realPressure);
+    Serial.print(",");
+    Serial.print(absoluteAltitude);
+    Serial.print(",");
+    Serial.println(relativeAltitude);
+    // Create a CSV string with the data
+  String csvData = String(rawTemp) + "," + String(realTemperature) + "," + String(rawPressure) + "," + String(realPressure) + "," + String(absoluteAltitude) + "," + String(relativeAltitude);
+
+  // Send the data to the server
+  udp.beginPacket(serverIP, serverPort);
+  udp.write((uint8_t*)csvData.c_str(), csvData.length());
+  udp.endPacket();
+
+  delay(1000);
+  }
+ 
+}
