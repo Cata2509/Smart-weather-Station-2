@@ -1,0 +1,36 @@
+import socket
+import csv
+
+#Configurarea serverului UDP
+UDP_IP = "adresa ip"  # Adresa IP a PC-ului
+UDP_PORT = port  # Portul de comunicare al serverului
+
+#Deschideți fișierul CSV pentru scriere
+csv_file = open('data.csv', 'w', newline='')
+csv_writer = csv.writer(csv_file)
+
+#Scrieți antetul coloanelor în fișier
+csv_writer.writerow(["Raw Temperature", "Real Temperature", "Raw Pressure", "Real Pressure", "Absolute Altitude", "Relative Altitude"])
+
+#Configurarea serverului UDP
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((UDP_IP, UDP_PORT))
+
+print("Waiting for data...")
+
+#Primirea și scrierea datelor în fișierul CSV
+while True:
+    data, addr = sock.recvfrom(1024)
+    data = data.decode().strip()
+
+    # Parsați datele separate prin virgulă
+    data = data.split(",")
+
+    # Scrieți datele în fișierul CSV
+    csv_writer.writerow(data)
+    csv_file.flush()  # Golește bufferul de scriere
+
+    print("Data written to CSV:", data)
+
+#Închideți fișierul CSV
+csv_file.close()
